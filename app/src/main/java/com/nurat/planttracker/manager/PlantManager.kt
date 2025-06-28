@@ -10,7 +10,7 @@ import java.time.Instant
 interface PlantStateRepository {
     fun savePlantState(state: PlantState)
     fun getPlantState(): PlantState
-    fun saveLastCommitTimestamp(timestamp: Instant)
+    fun saveLastCommitTimestamp(timestamp: Instant?)
     fun getLastCommitTimestamp(): Instant?
 }
 
