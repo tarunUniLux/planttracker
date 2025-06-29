@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="16dp"
+    android:background="#E0F7FA"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/current_plant_state_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Plant Stage: SEED"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#263238"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp"/>
+
+    <ImageView
+        android:id="@+id/plant_image_view"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:src="@drawable/plant_seed"
+        android:scaleType="fitCenter"
+        android:contentDescription="Plant image"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- GitHub Token Input Section -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:hint="GitHub Username">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/github_username_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName"
+            android:maxLines="1"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:hint="GitHub Personal Access Token">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/github_token_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:maxLines="1"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="24dp">
+
+        <Button
+            android:id="@+id/save_github_credentials_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save GitHub Credentials"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:backgroundTint="#2196F3"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:elevation="4dp"
+            app:cornerRadius="12dp"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/check_commits_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Check Commits Now"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:backgroundTint="#4CAF50"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:elevation="4dp"
+            app:cornerRadius="12dp"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+
+    <TextView
+        android:id="@+id/ai_suggestions_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="AI Feedback will appear here after a commit."
+        android:textSize="16sp"
+        android:textColor="#424242"
+        android:padding="16dp"
+        android:background="@drawable/rounded_background"
+        android:gravity="top|center_horizontal"
+        android:lineSpacingExtra="4dp"
+        android:scrollbars="vertical"/>
+
+</LinearLayout>
