@@ -73,7 +73,7 @@ import java.time.Instant
 
 // IMPORTANT: Replace "YOUR_GEMINI_API_KEY" with your actual Gemini API key.
 // Obtain it from Google AI Studio: https://aistudio.google.com/
-const val GEMINI_API_KEY = "AIzaSyDxiG8VT_bDkDXyCOuG65mgHgCGFVVQVIc"
+const val GEMINI_API_KEY = "AIzaSyDDmKXoPoMN7pWlOM6bURmhaP8Sir-zKg4"
 
 // We will get the GitHub username and repo from the user input/storage now.
 // Remove the old const val GITHUB_USERNAME and GITHUB_REPO
