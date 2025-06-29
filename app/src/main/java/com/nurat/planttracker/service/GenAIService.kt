@@ -1,6 +1,7 @@
 package com.nurat.planttracker.service
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -21,9 +22,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
     override suspend fun analyzeCommitMessage(commitMessage: String): String {
         val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\". Keep the suggestion concise and actionable."
 
-        // FIX: Removed Markdown link formatting from the URL string.
-        // It should be a plain URL for OkHttp to parse correctly.
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey"
+        val url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey](https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey)"
 
         val payload = """
             {
@@ -45,7 +44,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
 
         val requestBody = payload.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
-            .url(url) // Use the plain URL string here
+            .url(url)
             .post(requestBody)
             .build()
 
@@ -67,6 +66,8 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
                         ?.get("text")?.jsonPrimitive?.content ?: "AI: No text part found in response."
                 } catch (e: Exception) {
                     println("GeminiGenAIService: JSON Parsing Error: ${e.message}. Raw body: $responseBody")
+                    // IMPORTANT: Log the stack trace for more details
+                    e.printStackTrace()
                     return "AI: Parsing error - unexpected response format. (Raw: $responseBody)"
                 }
             } else {
@@ -75,9 +76,13 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
             }
         } catch (e: IOException) {
             println("GeminiGenAIService: Network Error: ${e.message}")
+            // IMPORTANT: Log the stack trace for more details
+            e.printStackTrace()
             return "AI: Network error: ${e.message}"
         } catch (e: Exception) {
             println("GeminiGenAIService: General Error: ${e.message}")
+            // IMPORTANT: Log the stack trace for more details
+            e.printStackTrace() // This will print the full stack trace to Logcat
             return "AI: An unexpected error occurred: ${e.message}"
         }
     }
