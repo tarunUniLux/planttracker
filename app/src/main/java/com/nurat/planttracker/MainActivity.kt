@@ -1,51 +1,3 @@
-//package com.nurat.planttracker
-//
-//import android.os.Bundle
-//import androidx.activity.ComponentActivity
-//import androidx.activity.compose.setContent
-//import androidx.activity.enableEdgeToEdge
-//import androidx.compose.foundation.layout.fillMaxSize
-//import androidx.compose.foundation.layout.padding
-//import androidx.compose.material3.Scaffold
-//import androidx.compose.material3.Text
-//import androidx.compose.runtime.Composable
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.tooling.preview.Preview
-//import com.nurat.planttracker.ui.theme.PlanttrackerTheme
-//
-//class MainActivity : ComponentActivity() {
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
-//        setContent {
-//            PlanttrackerTheme {
-//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-//                    Greeting(
-//                        name = "Android",
-//                        modifier = Modifier.padding(innerPadding)
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//@Composable
-//fun Greeting(name: String, modifier: Modifier = Modifier) {
-//    Text(
-//        text = "Hello $name!",
-//        modifier = modifier
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    PlanttrackerTheme {
-//        Greeting("Android")
-//    }
-//}
-
 package com.nurat.planttracker
 
 import android.os.Build
@@ -67,7 +19,9 @@ import com.nurat.planttracker.service.GitHubService
 import com.nurat.planttracker.service.GitHubServiceImpl // Import the real implementation
 import com.nurat.planttracker.service.GeminiGenAIService
 import com.nurat.planttracker.worker.PlantCheckWorker
+import kotlinx.coroutines.Dispatchers // Import Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext // Import withContext
 import java.util.concurrent.TimeUnit
 import java.time.Instant
 
@@ -156,16 +110,19 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.Main) { // Launch on Main dispatcher for UI updates
             Toast.makeText(this@MainActivity, "Checking GitHub commits...", Toast.LENGTH_SHORT).show()
             aiSuggestionsTextView.text = "Checking GitHub for new commits and analyzing..."
 
-            val lastCommitTime = plantStateRepository.getLastCommitTimestamp() ?: Instant.EPOCH
-            val newCommits = githubService.getCommitsSince(
-                username = username,
-                repo = null, // Or provide a specific repo from user input if you add that UI
-                since = lastCommitTime
-            )
+            // Perform network/IO operations on Dispatchers.IO
+            val newCommits = withContext(Dispatchers.IO) {
+                val lastCommitTime = plantStateRepository.getLastCommitTimestamp() ?: Instant.EPOCH
+                githubService.getCommitsSince(
+                    username = username,
+                    repo = null, // Check all user's repos for simplicity or pass specific repo
+                    since = lastCommitTime
+                )
+            }
 
             if (newCommits.isNotEmpty()) {
                 plantManager.grow()
@@ -173,15 +130,26 @@ class MainActivity : AppCompatActivity() {
                 // Analyze the most recent new commit message
                 val latestCommitMessage = newCommits.firstOrNull()
                 if (latestCommitMessage != null) {
-                    val aiSuggestion = genAIService.analyzeCommitMessage(latestCommitMessage)
+                    // AI API call also needs to be on a background thread
+                    val aiSuggestion = withContext(Dispatchers.IO) {
+                        genAIService.analyzeCommitMessage(latestCommitMessage)
+                    }
                     aiSuggestionsTextView.text = "AI Feedback for '$latestCommitMessage':\n$aiSuggestion"
                 } else {
                     aiSuggestionsTextView.text = "New commits detected, but no message to analyze."
                 }
                 Toast.makeText(this@MainActivity, "Plant grew!", Toast.LENGTH_SHORT).show()
             } else {
-                aiSuggestionsTextView.text = "No new commits detected since last check to grow the plant."
-                Toast.makeText(this@MainActivity, "No new commits.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "No new commits detected since last check to grow the plant.", Toast.LENGTH_SHORT).show()
+                // Only wilt if the plant is not a SEED and no commits for a day
+                // This checkAndAdjustPlantState also does IO, so it should be called via WorkManager or a background thread
+                // For direct call, wrap in withContext(Dispatchers.IO)
+                if (plantManager.getCurrentPlantState() != PlantState.SEED) {
+                    withContext(Dispatchers.IO) {
+                        plantManager.checkAndAdjustPlantState() // This handles wilting
+                    }
+                    updatePlantUI() // Update UI after potential wilt
+                }
             }
         }
     }
