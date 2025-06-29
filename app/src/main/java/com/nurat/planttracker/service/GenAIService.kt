@@ -1,5 +1,3 @@
-// ** GenAIService.kt **
-// Path: app/kotlin+java/com.nurat.planttracker/service/GenAIService.kt
 package com.nurat.planttracker.service
 
 import kotlinx.serialization.json.Json
@@ -13,6 +11,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
+
 interface GenAIService {
     suspend fun analyzeCommitMessage(commitMessage: String): String
 }
@@ -21,8 +20,20 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
     private val client = OkHttpClient()
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
+    // Create a Json instance for serialization
+    private val json = Json {
+        // You can configure Json builder here if needed, e.g., ignoreUnknownKeys = true
+    }
+
     override suspend fun analyzeCommitMessage(commitMessage: String): String {
-        val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\". Keep the suggestion concise and actionable."
+        val escapedCommitMessage = commitMessage
+            .replace("\\", "\\\\") // Escape backslashes first
+            .replace("\"", "\\\"") // Escape double quotes
+            .replace("\n", "\\n")  // Escape newlines
+            .replace("\r", "\\r")  // Escape carriage returns
+            .replace("\t", "\\t")  // Escape tabs
+
+        val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$escapedCommitMessage\". Keep the suggestion concise and actionable."
 
         val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey"
 
@@ -61,14 +72,13 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
                 }
                 println("GeminiGenAIService: Raw successful response body: $responseBody")
                 try {
-                    val json = Json.parseToJsonElement(responseBody).jsonObject
-                    json["candidates"]?.jsonArray?.get(0)?.jsonObject
+                    val jsonElement = json.parseToJsonElement(responseBody) // Use the initialized Json instance
+                    jsonElement.jsonObject["candidates"]?.jsonArray?.get(0)?.jsonObject
                         ?.get("content")?.jsonObject
                         ?.get("parts")?.jsonArray?.get(0)?.jsonObject
                         ?.get("text")?.jsonPrimitive?.content ?: "AI: No text part found in response."
                 } catch (e: Exception) {
                     println("GeminiGenAIService: JSON Parsing Error: ${e.message}. Raw body: $responseBody")
-                    // IMPORTANT: Log the stack trace for more details
                     e.printStackTrace()
                     return "AI: Parsing error - unexpected response format. (Raw: $responseBody)"
                 }
@@ -78,14 +88,12 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
             }
         } catch (e: IOException) {
             println("GeminiGenAIService: Network Error: ${e.message}")
-            // IMPORTANT: Log the stack trace for more details
             e.printStackTrace()
             return "AI: Network error: ${e.message}"
         } catch (e: Exception) {
-            println("GeminiGenAIService: General Error: ${e.message}")
-            // IMPORTANT: Log the stack trace for more details
-            e.printStackTrace() // This will print the full stack trace to Logcat
-            return "AI: An unexpected error occurred: ${e.message ?: e.javaClass.simpleName}" // Show class name if message is null
+            println("GeminiGenAIService: General Error: ${e.localizedMessage ?: e.message ?: e.javaClass.simpleName}")
+            e.printStackTrace()
+            return "AI: An unexpected error occurred: ${e.localizedMessage ?: e.message ?: e.javaClass.simpleName}"
         }
     }
 }
