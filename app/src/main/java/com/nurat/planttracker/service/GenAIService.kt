@@ -21,27 +21,22 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
     // Create a Json instance for serialization.
-    // Configure it to be strict or lenient as needed, but for simple string encoding, defaults are often fine.
     private val json = Json {
-        // This is often useful for parsing responses where keys might be missing or unordered
         ignoreUnknownKeys = true
     }
 
     override suspend fun analyzeCommitMessage(commitMessage: String): String {
-        // Step 1: Construct the raw prompt string. This is the text content we want to send to Gemini.
-        // It might contain characters that are problematic for JSON embedding.
+        // Step 1: Construct the raw prompt string.
         val rawPromptContent = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\". Keep the suggestion concise and actionable."
 
         // Step 2: Use Kotlinx Serialization's Json.encodeToString to convert `rawPromptContent`
-        // into a *valid JSON string literal*. This function automatically handles escaping
-        // all problematic characters (like double quotes, newlines, backslashes).
+        // into a *valid JSON string literal*.
         val jsonSafePromptText: String = json.encodeToString(rawPromptContent)
 
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey"
+        // FIX: Changed model name from gemini-pro to gemini-2.0-flash
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey"
 
         // Step 3: Construct the final JSON payload.
-        // IMPORTANT: Notice that $jsonSafePromptText is embedded *without* additional quotes around it.
-        // This is because `json.encodeToString` already produces a quoted string, like "\"your escaped string\"".
         val payload = """
             {
                 "contents": [
