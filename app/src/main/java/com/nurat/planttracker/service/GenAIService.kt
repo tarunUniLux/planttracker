@@ -1,7 +1,6 @@
 package com.nurat.planttracker.service
 
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -21,6 +20,10 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
 
     override suspend fun analyzeCommitMessage(commitMessage: String): String {
         val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\". Keep the suggestion concise and actionable."
+
+        // FIX: Removed Markdown link formatting from the URL string.
+        // It should be a plain URL for OkHttp to parse correctly.
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey"
 
         val payload = """
             {
@@ -42,7 +45,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
 
         val requestBody = payload.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
-            .url("[https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey](https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey)")
+            .url(url) // Use the plain URL string here
             .post(requestBody)
             .build()
 
