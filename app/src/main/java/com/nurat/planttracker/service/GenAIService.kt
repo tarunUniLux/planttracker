@@ -12,22 +12,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
 interface GenAIService {
-    /**
-     * Analyzes a commit message and provides suggestions for code improvement.
-     *
-     * @param commitMessage The message from the Git commit.
-     * @return A string containing the AI's suggestions, or an empty string if no suggestions/error.
-     */
     suspend fun analyzeCommitMessage(commitMessage: String): String
 }
 
-// Implementation using Google Gemini API (conceptual - requires API key and proper setup)
 class GeminiGenAIService(private val apiKey: String) : GenAIService {
     private val client = OkHttpClient()
-    private val JSON = "application/json; charset=utf-8".toMediaType()
+    private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
     override suspend fun analyzeCommitMessage(commitMessage: String): String {
-        val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\""
+        val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\". Keep the suggestion concise and actionable."
 
         val payload = """
             {
@@ -47,33 +40,42 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
             }
         """.trimIndent()
 
-        val requestBody = payload.toRequestBody(JSON)
+        val requestBody = payload.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey")
+            .url("[https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey](https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey)")
             .post(requestBody)
             .build()
 
         return try {
             val response = client.newCall(request).execute()
+            val responseBody = response.body?.string()
+
             if (response.isSuccessful) {
-                response.body?.string()?.let { responseBody ->
+                if (responseBody.isNullOrEmpty()) {
+                    println("GeminiGenAIService: Empty response body from AI.")
+                    return "AI: Received empty response."
+                }
+                println("GeminiGenAIService: Raw successful response body: $responseBody") // Log successful body
+                try {
                     val json = Json.parseToJsonElement(responseBody).jsonObject
-                    // Adjust parsing based on actual Gemini API response structure
-                    // This is a simplified example
                     json["candidates"]?.jsonArray?.get(0)?.jsonObject
                         ?.get("content")?.jsonObject
                         ?.get("parts")?.jsonArray?.get(0)?.jsonObject
-                        ?.get("text")?.jsonPrimitive?.content ?: ""
-                } ?: "No response from AI."
+                        ?.get("text")?.jsonPrimitive?.content ?: "AI: No text part found in response."
+                } catch (e: Exception) {
+                    println("GeminiGenAIService: JSON Parsing Error: ${e.message}. Raw body: $responseBody")
+                    return "AI: Parsing error - unexpected response format. (Raw: $responseBody)"
+                }
             } else {
-                "AI API Error: ${response.code} - ${response.message}"
+                println("GeminiGenAIService: AI API Error: ${response.code} - ${response.message}. Raw error body: $responseBody") // Log error body
+                return "AI API Error: ${response.code} - ${response.message}. (Details: $responseBody)"
             }
         } catch (e: IOException) {
-            "Network Error: ${e.message}"
+            println("GeminiGenAIService: Network Error: ${e.message}")
+            return "AI: Network error: ${e.message}"
         } catch (e: Exception) {
-            "Parsing Error: ${e.message}"
+            println("GeminiGenAIService: General Error: ${e.message}")
+            return "AI: An unexpected error occurred: ${e.message}"
         }
     }
 }
-
-
