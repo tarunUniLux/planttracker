@@ -1,3 +1,5 @@
+// ** GenAIService.kt **
+// Path: app/kotlin+java/com.nurat.planttracker/service/GenAIService.kt
 package com.nurat.planttracker.service
 
 import kotlinx.serialization.json.Json
@@ -22,7 +24,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
     override suspend fun analyzeCommitMessage(commitMessage: String): String {
         val prompt = "Analyze the following commit message and suggest how the related code might be improved: \"$commitMessage\". Keep the suggestion concise and actionable."
 
-        val url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey](https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey)"
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey"
 
         val payload = """
             {
@@ -57,7 +59,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
                     println("GeminiGenAIService: Empty response body from AI.")
                     return "AI: Received empty response."
                 }
-                println("GeminiGenAIService: Raw successful response body: $responseBody") // Log successful body
+                println("GeminiGenAIService: Raw successful response body: $responseBody")
                 try {
                     val json = Json.parseToJsonElement(responseBody).jsonObject
                     json["candidates"]?.jsonArray?.get(0)?.jsonObject
@@ -71,7 +73,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
                     return "AI: Parsing error - unexpected response format. (Raw: $responseBody)"
                 }
             } else {
-                println("GeminiGenAIService: AI API Error: ${response.code} - ${response.message}. Raw error body: $responseBody") // Log error body
+                println("GeminiGenAIService: AI API Error: ${response.code} - ${response.message}. Raw error body: $responseBody")
                 return "AI API Error: ${response.code} - ${response.message}. (Details: $responseBody)"
             }
         } catch (e: IOException) {
@@ -83,7 +85,7 @@ class GeminiGenAIService(private val apiKey: String) : GenAIService {
             println("GeminiGenAIService: General Error: ${e.message}")
             // IMPORTANT: Log the stack trace for more details
             e.printStackTrace() // This will print the full stack trace to Logcat
-            return "AI: An unexpected error occurred: ${e.message}"
+            return "AI: An unexpected error occurred: ${e.message ?: e.javaClass.simpleName}" // Show class name if message is null
         }
     }
 }
