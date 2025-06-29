@@ -110,46 +110,61 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // Check Gemini API key BEFORE making the call
+        if (GEMINI_API_KEY == "YOUR_GEMINI_API_KEY" || GEMINI_API_KEY.isBlank()) {
+            aiSuggestionsTextView.text = "Error: Gemini API Key is not set. Please update GEMINI_API_KEY in MainActivity.kt"
+            Toast.makeText(this, "Gemini API Key is missing!", Toast.LENGTH_LONG).show()
+            return
+        }
+
         lifecycleScope.launch(Dispatchers.Main) { // Launch on Main dispatcher for UI updates
             Toast.makeText(this@MainActivity, "Checking GitHub commits...", Toast.LENGTH_SHORT).show()
             aiSuggestionsTextView.text = "Checking GitHub for new commits and analyzing..."
 
-            // Perform network/IO operations on Dispatchers.IO
-            val newCommits = withContext(Dispatchers.IO) {
-                val lastCommitTime = plantStateRepository.getLastCommitTimestamp() ?: Instant.EPOCH
-                githubService.getCommitsSince(
-                    username = username,
-                    repo = null, // Check all user's repos for simplicity or pass specific repo
-                    since = lastCommitTime
-                )
-            }
+            try { // Comprehensive try-catch for all background operations
+                // Perform network/IO operations on Dispatchers.IO
+                val newCommits = withContext(Dispatchers.IO) {
+                    val lastCommitTime = plantStateRepository.getLastCommitTimestamp() ?: Instant.EPOCH
+                    githubService.getCommitsSince(
+                        username = username,
+                        repo = null, // Check all user's repos for simplicity or pass specific repo
+                        since = lastCommitTime
+                    )
+                }
 
-            if (newCommits.isNotEmpty()) {
-                plantManager.grow()
-                updatePlantUI()
-                // Analyze the most recent new commit message
-                val latestCommitMessage = newCommits.firstOrNull()
-                if (latestCommitMessage != null) {
-                    // AI API call also needs to be on a background thread
-                    val aiSuggestion = withContext(Dispatchers.IO) {
-                        genAIService.analyzeCommitMessage(latestCommitMessage)
+                if (newCommits.isNotEmpty()) {
+                    plantManager.grow()
+                    updatePlantUI()
+                    // Analyze the most recent new commit message
+                    val latestCommitMessage = newCommits.firstOrNull()
+                    if (latestCommitMessage != null) {
+                        // AI API call also needs to be on a background thread
+                        val aiSuggestion = withContext(Dispatchers.IO) {
+                            genAIService.analyzeCommitMessage(latestCommitMessage)
+                        }
+                        aiSuggestionsTextView.text = "AI Feedback for '$latestCommitMessage':\n$aiSuggestion"
+                    } else {
+                        aiSuggestionsTextView.text = "New commits detected, but no message to analyze."
                     }
-                    aiSuggestionsTextView.text = "AI Feedback for '$latestCommitMessage':\n$aiSuggestion"
+                    Toast.makeText(this@MainActivity, "Plant grew!", Toast.LENGTH_SHORT).show()
                 } else {
-                    aiSuggestionsTextView.text = "New commits detected, but no message to analyze."
-                }
-                Toast.makeText(this@MainActivity, "Plant grew!", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@MainActivity, "No new commits detected since last check to grow the plant.", Toast.LENGTH_SHORT).show()
-                // Only wilt if the plant is not a SEED and no commits for a day
-                // This checkAndAdjustPlantState also does IO, so it should be called via WorkManager or a background thread
-                // For direct call, wrap in withContext(Dispatchers.IO)
-                if (plantManager.getCurrentPlantState() != PlantState.SEED) {
-                    withContext(Dispatchers.IO) {
-                        plantManager.checkAndAdjustPlantState() // This handles wilting
+                    Toast.makeText(this@MainActivity, "No new commits detected since last check to grow the plant.", Toast.LENGTH_SHORT).show()
+                    // Only wilt if the plant is not a SEED and no commits for a day
+                    // This checkAndAdjustPlantState also does IO, so it should be called via WorkManager or a background thread
+                    // For direct call, wrap in withContext(Dispatchers.IO)
+                    if (plantManager.getCurrentPlantState() != PlantState.SEED) {
+                        withContext(Dispatchers.IO) {
+                            plantManager.checkAndAdjustPlantState() // This handles wilting
+                        }
+                        updatePlantUI() // Update UI after potential wilt
                     }
-                    updatePlantUI() // Update UI after potential wilt
                 }
+            } catch (e: Exception) {
+                // Log the exception in the UI for immediate feedback
+                val errorMessage = "Error during GitHub/AI operation: ${e.localizedMessage ?: e.message ?: e.javaClass.simpleName}"
+                aiSuggestionsTextView.text = "Operation Failed: $errorMessage"
+                Toast.makeText(this@MainActivity, errorMessage, Toast.LENGTH_LONG).show()
+                e.printStackTrace() // Print full stack trace to Logcat
             }
         }
     }
